@@ -2,8 +2,8 @@
 #define echoPin 2 // Only 2 or 3, as we're using interruptions
 
 #define analogPin A3
-#define SerialBAUD 230400
-#define VALUES_TO_STORE 400
+#define SerialBAUD 9600
+#define VALUES_TO_STORE 200
 
 char buffer[100];
 volatile int keep_looping;
@@ -40,6 +40,10 @@ int standard_distance() {
   return distance;
 }
 
+void send_standard_distance(int dist) {
+  Serial.println(dist);
+}
+
 int* new_method_distance() {
   static int values[VALUES_TO_STORE];
   keep_looping = 1;
@@ -59,7 +63,7 @@ int* new_method_distance() {
   }
   detachInterrupt(digitalPinToInterrupt(echoPin));
   values[0] = n;
-  return values;
+  return &values[0];
 }
 
 void send_new_method_distance(int *values) {
@@ -67,7 +71,7 @@ void send_new_method_distance(int *values) {
   int total_values = values[0];
   for(i = 1; i < total_values; i++) {
     Serial.println(values[i]);
-    delay(10);
+    delay(50);
   }
   Serial.println(-2);
 }
@@ -87,7 +91,8 @@ void loop() {
   }
   else if(strncmp(input, "SD", 2) == 0) {
     Serial.print("OK");
-    Serial.print("SD Method");
+    int dist = standard_distance();
+    send_standard_distance(dist);
   }
   else if(strncmp(input, "AL", 2) == 0) {
     Serial.print("YES");
