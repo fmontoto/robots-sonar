@@ -3,7 +3,7 @@
 
 #define analogPin A3
 #define SerialBAUD 230400
-#define VALUES_TO_STORE 300
+#define VALUES_TO_STORE 400
 
 char buffer[100];
 volatile int keep_looping;
@@ -40,13 +40,13 @@ int standard_distance() {
   return distance;
 }
 
-int [] new_method_distance() {
+int* new_method_distance() {
   static int values[VALUES_TO_STORE];
   keep_looping = 1;
   int n = 1;
   trigger_sonar();
   while(digitalRead(echoPin) == HIGH)
-    Serial.println(analogRead(analogPin));;
+    ;
   attachInterrupt(digitalPinToInterrupt(echoPin), stop_looping, FALLING);
   while(keep_looping && n < VALUES_TO_STORE) {
     values[n] = analogRead(analogPin);
@@ -59,25 +59,41 @@ int [] new_method_distance() {
   }
   detachInterrupt(digitalPinToInterrupt(echoPin));
   values[0] = n;
-  return values
+  return values;
+}
+
+void send_new_method_distance(int *values) {
+  int i;
+  int total_values = values[0];
+  for(i = 1; i < total_values; i++) {
+    Serial.println(values[i]);
+    delay(10);
+  }
+  Serial.println(-2);
 }
 
 void loop() {
   char input[2];
+  int *aux;
   while(Serial.available() < 2) {
     delay(500);
   }
 
   Serial.readBytes(input, 2);
-  if(strncmp(input, "ND", 2)) {
-    Serial.println("ND Method");
-    //new_method_distance();
+  if(strncmp(input, "ND", 2) == 0) {
+    Serial.print("OK");
+    aux = new_method_distance();
+    send_new_method_distance(aux);
   }
-  else if(strncmp(input, "DT", 2)) {
-    Serial.println("DT Method");
+  else if(strncmp(input, "SD", 2) == 0) {
+    Serial.print("OK");
+    Serial.print("SD Method");
+  }
+  else if(strncmp(input, "AL", 2) == 0) {
+    Serial.print("YES");
   }
   else {
-    Serial.println("Not a valid input");
+    Serial.print("Not a valid input");
   }
 }
 
