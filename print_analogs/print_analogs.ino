@@ -37,13 +37,13 @@ int standard_distance() {
   if (distance >= 200 || distance <= 0){
     return 0;
   }
-  return distance; 
+  return distance;
 }
 
-void new_method_distance() {
+int [] new_method_distance() {
   static int values[VALUES_TO_STORE];
   keep_looping = 1;
-  int n = 0;
+  int n = 1;
   trigger_sonar();
   while(digitalRead(echoPin) == HIGH)
     Serial.println(analogRead(analogPin));;
@@ -58,13 +58,27 @@ void new_method_distance() {
     ++n;
   }
   detachInterrupt(digitalPinToInterrupt(echoPin));
+  values[0] = n;
   return values
 }
 
 void loop() {
-  //Serial.println(standard_distance());
-  new_method_distance();
-  delay(100);
+  char input[2];
+  while(Serial.available() < 2) {
+    delay(500);
+  }
+
+  Serial.readBytes(input, 2);
+  if(strncmp(input, "ND", 2)) {
+    Serial.println("ND Method");
+    //new_method_distance();
+  }
+  else if(strncmp(input, "DT", 2)) {
+    Serial.println("DT Method");
+  }
+  else {
+    Serial.println("Not a valid input");
+  }
 }
 
 void loop_() {
