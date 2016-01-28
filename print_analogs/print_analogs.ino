@@ -7,9 +7,14 @@
 
 char buffer[100];
 volatile int keep_looping;
+volatile int sig;
 
 void stop_looping() {
   keep_looping = 0;
+}
+
+void signal_interruption() {
+  sig = 0;
 }
 
 void setup() {
@@ -44,14 +49,40 @@ void send_standard_distance(int dist) {
   Serial.println(dist);
 }
 
+int *echo_rise_and_fall() {
+  static int values[VALUES_TO_STORE];
+  int n = 1;
+  keep_looping = 1;
+  attachInterrupt(digitalPinToInterrupt(echoPin), signal_interruption, RISING);
+  trigger_sonar();
+  sig = 1;
+  while(sig && n < VALUES_TO_STORE) {
+    values[n] = analogRead(analogPin);
+    ++n;
+  }
+  attachInterrupt(digitalPinToInterrupt(echoPin), stop_looping, FALLING);
+  values[n++] = -1;
+  
+  while(keep_looping && n < VALUES_TO_STORE) {
+    values[n] = analogRead(analogPin);
+    ++n;
+  }
+  values[n++] = -1;
+  while(n < VALUES_TO_STORE) {
+    values[n] = analogRead(analogPin);
+    ++n;
+  }
+  detachInterrupt(digitalPinToInterrupt(echoPin));
+  values[0] = n;
+  return &values[0];
+}
+
 int* new_method_distance() {
   static int values[VALUES_TO_STORE];
-  keep_looping = 1;
   int n = 1;
-  trigger_sonar();
-  while(digitalRead(echoPin) == HIGH)
-    ;
   attachInterrupt(digitalPinToInterrupt(echoPin), stop_looping, FALLING);
+  trigger_sonar();
+  keep_looping = 1;
   while(keep_looping && n < VALUES_TO_STORE) {
     values[n] = analogRead(analogPin);
     ++n;
@@ -76,6 +107,26 @@ void send_new_method_distance(int *values) {
   Serial.println(-2);
 }
 
+int *from_echo_rise() {
+  static int values[VALUES_TO_STORE];
+  int n = 1;
+  attachInterrupt(digitalPinToInterrupt(echoPin), stop_looping, RISING);
+  keep_looping = 1;
+  trigger_sonar();
+  while(keep_looping && n < VALUES_TO_STORE) {
+    values[n] = analogRead(analogPin);
+    ++n;
+  }
+  values[n++] = -1;
+  while(n < VALUES_TO_STORE) {
+    values[n] = analogRead(analogPin);
+    ++n;
+  }
+  detachInterrupt(digitalPinToInterrupt(echoPin));
+  values[0] = n;
+  return &values[0];
+}
+
 void loop() {
   char input[2];
   int *aux;
@@ -87,6 +138,16 @@ void loop() {
   if(strncmp(input, "ND", 2) == 0) {
     Serial.print("OK");
     aux = new_method_distance();
+    send_new_method_distance(aux);
+  }
+  else if(strncmp(input, "ER", 2) == 0) {
+    Serial.print("OK");
+    aux = from_echo_rise();
+    send_new_method_distance(aux);
+  }
+  else if(strncmp(input, "RF", 2) == 0) {
+    Serial.print("OK");
+    aux = echo_rise_and_fall();
     send_new_method_distance(aux);
   }
   else if(strncmp(input, "SD", 2) == 0) {
